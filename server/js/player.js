@@ -858,6 +858,25 @@ module.exports = Player = Character.extend({
         this.server.server.cache.set(this.sessionId, cache);
     },
 
+    //Basic Trading (Need target NFT lookup)
+    //=====================================
+    sendConsumable: function(targetNftId, item, qty) {
+        let cache = this.server.server.cache.get(this.sessionId);
+        let gameData = cache.gameData;
+        if (gameData.consumables === undefined) {
+            gameData.consumables = {};
+        }
+        let itemCount = gameData.consumables[item];
+        if (itemCount >= qty) {
+            dao.saveConsumable(this.nftId, item, -qty);
+            dao.saveConsumable(targetNftId, item, qty);
+            gameData.consumables[item] = itemCount - qty;
+            cache.gameData = gameData;
+            this.server.server.cache.set(this.sessionId, cache); 
+        }
+    },
+    //=====================================
+
     consumeItem: function(item) {
         let cache = this.server.server.cache.get(this.sessionId);
         let gameData = cache.gameData;
