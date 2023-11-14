@@ -34,7 +34,10 @@ module.exports = Mapx = cls.Class.extend({
         this.staticChests = map.staticChests;
         this.staticEntities = map.staticEntities;
         this.isLoaded = true;
-        
+        this.hiddenLayers = map.hiddenLayers || {};
+        this.collidingTiles = map.collidingTiles || {};
+        this.toggledLayers = [];
+
         // zone groups
     	this.zoneWidth = 28;
     	this.zoneHeight = 12;
@@ -109,6 +112,21 @@ module.exports = Mapx = cls.Class.extend({
         if(this.isOutOfBounds(x, y)) {
             return false;
         }
+
+        // Loop over keys of this.hiddenLayers
+        for(var	i = 0; i < Object.keys(this.hiddenLayers).length; i++) {
+            let layerName = Object.keys(this.hiddenLayers)[i]
+            if(this.toggledLayers[layerName]) {
+
+                // if layer has collision
+                let tileIndex = this.GridPositionToTileIndex(x - 1, y);
+                let tileType = this.hiddenLayers[layerName][tileIndex];
+                if(tileType !== null) {
+                    return (this.collidingTiles[tileType] === true);
+                }
+            }
+        }
+
         let collides;
         try {
             collides = this.grid[y][x] === 1;
@@ -286,6 +304,21 @@ module.exports = Mapx = cls.Class.extend({
         return Object.keys(this.triggerDoors).find(key => 
             this.triggerDoors[key].find((element) => 
             element.x === x && element.y === y));
+    },
+
+    findClosestCheckpoint: function(x, y) {
+        let closestCheckpoint = null;
+        let closestDistance = Infinity;
+
+        for (let id in this.checkpoints) {
+            let checkpoint = this.checkpoints[id];
+            let distance = Utils.distanceTo(x, y, checkpoint.x, checkpoint.y);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestCheckpoint = checkpoint;
+            }
+        }
+        return closestCheckpoint;
     }
 });
 

@@ -38,9 +38,18 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
             this.handlers[Types.Messages.BLINK] = this.receiveBlink;
             this.handlers[Types.Messages.MOBDOSPECIAL] = this.receiveMobDoSpecial;
             this.handlers[Types.Messages.MOBEXITCOMBAT] = this.receiveMobExitCombat;
+            this.handlers[Types.Messages.QUEST_COMPLETE] = this.receiveQuestComplete;
+            this.handlers[Types.Messages.FOLLOW] = this.receiveFollow;
+            this.handlers[Types.Messages.CAMERA] = this.receiveCamera;
+            this.handlers[Types.Messages.SOUND] = this.receiveSound;
+            this.handlers[Types.Messages.MUSIC] = this.receiveMusic;
+            this.handlers[Types.Messages.LAYER] = this.receiveLayer;
+            this.handlers[Types.Messages.ANIMATE] = this.receiveAnimate;
             this.handlers[Types.Messages.QUEST_COMPLETE] = this.receieveQuestComplete;
             this.handlers[Types.Messages.SPAWNFLOAT] = this.receiveSpawnFloat;
             this.handlers[Types.Messages.DESPAWNFLOAT] = this.receiveDespawnFloat;
+            this.handlers[Types.Messages.NOTIFY] = this.receiveNotify;
+            this.handlers[Types.Messages.BUFFINFO] = this.receiveBuffInfo;
 
             this.useBison = false;
             this.enable();
@@ -110,7 +119,7 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
                 this.connection.on("disconnect", function() {
                     console.debug("Connection closed");
                     $('#container').addClass('error');
-                    
+
                     if(self.disconnected_callback) {
                         if(self.isTimeout) {
                             self.disconnected_callback("You have been disconnected for being inactive for too long");
@@ -298,7 +307,8 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
                 this.chat_callback(id, text);
             }
         },
-    
+
+
         receiveEquipItem: function(data) {
             var id = data[1],
                 itemKind = data[2];
@@ -408,7 +418,7 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
             }
         },
 
-        receieveQuestComplete: function(data) {
+        receiveQuestComplete: function(data) {
             let questName = data[1],
                 endText = data[2],
                 xpReward = data[3];
@@ -417,6 +427,57 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
             if (this.questComplete_callback) {
                 this.questComplete_callback(questName, endText, xpReward, medal);
             }
+        },
+
+        receiveFollow: function(data) {
+            let entityId = data[1]
+
+            if (this.follow_callback) {
+                this.follow_callback(entityId);
+            }
+        },
+
+        receiveCamera: function(data) {
+            let x = parseInt(data[1]),
+                y = parseInt(data[2]);
+
+            if (this.camera_callback) {
+                this.camera_callback(x, y);
+            }
+        },
+
+        receiveSound: function(data) {
+            var sound = data[1];
+
+            if(this.sound_callback) {
+                this.sound_callback(sound);
+            }
+        },
+
+        receiveMusic: function(data) {
+            var music = data[1];
+
+            if(this.music_callback) {
+                this.music_callback(music);
+            }
+        },
+
+        receiveLayer: function(data) {
+            var layer = data[1];
+            var show = data[2];
+
+            if(this.layer_callback) {
+                this.layer_callback(layer, show);
+            }
+        },
+
+        receiveAnimate: function(data) {
+          var entityId = data[1];
+          var animation = data[2];
+
+          if(this.animate_callback) {
+              this.animate_callback(entityId, animation);
+          }
         },
 
         receiveSpawnFloat: function(data) {
@@ -437,7 +498,25 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
                 this.despawnFloat_callback(id);
             }
         },
+
+        receiveNotify: function(data) {
+            let text = data[1];
         
+            if(this.notify_callback) {
+                this.notify_callback(text);
+            }
+        },
+
+        receiveBuffInfo: function(data) {
+            let stat = data[1],
+                percent = data[2],
+                expireTime = data[3];
+
+            if(this.buffInfo_callback) {
+                this.buffInfo_callback(stat, percent, expireTime);
+            }
+        },
+
         onDispatched: function(callback) {
             this.dispatched_callback = callback;
         },
@@ -501,7 +580,7 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
         onChatMessage: function(callback) {
             this.chat_callback = callback;
         },
-    
+
         onDropItem: function(callback) {
             this.drop_callback = callback;
         },
@@ -546,12 +625,44 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
             this.questComplete_callback = callback;
         },
 
+        onFollow: function(callback) {
+            this.follow_callback = callback;
+        },
+
+        onCamera: function(callback) {
+            this.camera_callback = callback;
+        },
+
+        onSound: function(callback) {
+            this.sound_callback = callback;
+        },
+
+        onMusic: function(callback) {
+            this.music_callback = callback;
+        },
+
+        onLayer: function(callback) {
+            this.layer_callback = callback;
+        },
+
+        onAnimate: function(callback) {
+            this.animate_callback = callback;
+        },
+
         onSpawnFloat: function(callback) {
             this.spawnFloat_callback = callback;
         },
 
         onDespawnFloat: function(callback) {
             this.despawnFloat_callback = callback;
+        },
+
+        onNotify: function(callback) {
+            this.notify_callback = callback;
+        },
+
+        onBuffInfo: function(callback) {
+            this.buffInfo_callback = callback;
         },
 
         sendHello: function(player) {
@@ -643,7 +754,13 @@ define(['player', 'entityfactory', 'lib/bison', 'mob'], function(Player, EntityF
         sendFishingResult: function(result) {
             this.sendMessage([Types.Messages.FISHINGRESULT,
                               result]);
-        }
+        },
+
+        sendConsumeItem: function(itemId) {
+            this.sendMessage([Types.Messages.CONSUMEITEM,
+                             itemId]);
+        },
+
     });
     
     return GameClient;

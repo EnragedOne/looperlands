@@ -2,6 +2,7 @@ const LOOPWORMS_LOOPERLANDS_BASE_URL = process.env.LOOPWORMS_LOOPERLANDS_BASE_UR
 const API_KEY = process.env.LOOPWORMS_API_KEY;
 const axios = require('axios');
 const NodeCache = require( "node-cache" );
+const Collectables = require('./collectables.js');
 const daoCache = new NodeCache();
 
 const MAX_RETRY_COUNT = 5;
@@ -39,6 +40,18 @@ loadExperience = async function (walletId, nftId) {
   const responseData = await axios.get(url, options);
   const xp = parseInt(responseData.data);
   return xp;
+}
+
+loadMapFlow = async function (mapId) {
+  const options = {
+    headers: {
+      'X-Api-Key': API_KEY
+    },
+  };
+
+  let url = `${LOOPWORMS_LOOPERLANDS_BASE_URL}/Maps/selectLooperLands_Quest2.php?map=${mapId}`;
+  const responseData = await axios.get(url, options);
+  return JSON.parse(responseData.data);
 }
 
 getCharacterData = async function (wallet, nft, retry) {
@@ -350,13 +363,40 @@ processLootEventQueue = async function(retry) {
 
 let LOOT_QUEUE_INTERVAL = undefined;
 
-exports.saveLootEvent = async function(avatarId, itemId) {
+exports.saveLootEvent = async function(avatarId, itemId, amount) {
+  if (amount === undefined) {
+    amount = 1;
+  }
+
   if (LOOT_QUEUE_INTERVAL === undefined) {
     // save the loot event queue every 30 seconds
     LOOT_QUEUE_INTERVAL = setInterval(processLootEventQueue, 1000 * 30);
   }
 
-  LOOT_EVENTS_QUEUE.push({avatarId: avatarId, itemId: itemId});
+  LOOT_EVENTS_QUEUE.push({avatarId: avatarId, itemId: itemId, amount})
+  if (Collectables.isCollectable(itemId)) {
+    const options = {
+      headers: {
+        'X-Api-Key': API_KEY
+      }
+    }
+    const url = `${LOOPWORMS_LOOPERLANDS_BASE_URL}/saveConsumable2.php`;
+    try {
+      const response = await axios.post(url, {avatarId: avatarId, itemId: itemId, quantity: amount}, options);
+
+      return response.data;
+    } catch (error) {
+      if (retry === undefined) {
+        retry = MAX_RETRY_COUNT;
+      }
+      retry -= 1;
+      if (retry > 0) {
+        return this.getItemCount(avatarId, itemId, retry);
+      } else {
+        console.error("getItemCount", error);
+      }
+    }
+  }
 }
 
 exports.getItemCount = async function(avatarId, itemId, retry) {
@@ -448,15 +488,13 @@ exports.loadAvatarGameData = async function(avatarId, retry) {
     }
   }
 
-  const url = `${LOOPWORMS_LOOPERLANDS_BASE_URL}/loadItemMobQuest.php?NFTID=${avatarId}`;
+  const url = `${LOOPWORMS_LOOPERLANDS_BASE_URL}/loadItemConsumableMobQuest.php?NFTID=${avatarId}`;
 
   try {
     const response = await axios.get(url, options);
 
     let responseData = response.data[0];
-
-    let mobKills, items = {}, quests = {};
-
+    let mobKills, items = {}, quests = {}, consumables = {};
 
     if (responseData.mobJson) {
       mobKills = responseData.mobJson.reduce((avatarMobKills, mobKills) => {
@@ -478,6 +516,16 @@ exports.loadAvatarGameData = async function(avatarId, retry) {
       }, {});
     }
 
+    if (responseData.itemConsumableJson) {
+      items = responseData.itemConsumableJson.reduce((avatarItems, itemCount) => {
+        const itemId = itemCount.itemConsumableId;
+        if (itemId && parseInt(itemCount.iCount) > 0) {
+          avatarItems[itemId] = itemCount.iCount;
+        }
+        return avatarItems;
+      }, {});
+    }
+
     if (responseData.questJson) {
       quests = responseData.questJson.reduce((avatarQuests, quest) => {
         const status = quest.status;
@@ -493,13 +541,24 @@ exports.loadAvatarGameData = async function(avatarId, retry) {
       }, {});
     }
 
+    if (responseData.itemConsumableJson) {
+      consumables = responseData.itemConsumableJson.reduce((avatarConsumes, item) => {
+        const itemId = item.itemConsumableId;
+        if (itemId) {
+          avatarConsumes[itemId] = item.iCount;
+        }
+        return avatarConsumes;
+      }, {});
+    }
+
     const data = {
       mobKills: mobKills,
       items: items,
-      quests: quests
+      quests: quests,
+      consumables: consumables
     }
 
-    //console.log("loadAvatarGameData", data);
+    // console.log("loadAvatarGameData", data);
 
     return data;
   } catch (error) {
@@ -542,6 +601,23 @@ exports.setQuestStatus = async function(avatarId, questId, status, retry) {
   }
 }
 
+exports.saveConsumable = async function(nft, item, qty) {
+  const options = {
+    headers: {
+      'X-Api-Key': API_KEY,
+      'Content-Type': 'application/json'
+    }
+  }
+  const url = `${LOOPWORMS_LOOPERLANDS_BASE_URL}/saveConsumable2.php`;
+  const sData = {avatarId: nft, itemId: item, quantity: qty};
+  try {
+    let response = await axios.post(url, sData, options);
+    return response.data;
+  } catch (error) {
+    console.error("saveConsumable", error);
+    return { "error": "Error saving consumable" };
+  }
+}
 
 exports.updateExperience = updateExperience;
 exports.saveCharacterData = saveCharacterData;
@@ -549,3 +625,4 @@ exports.getCharacterData = getCharacterData;
 exports.saveWeapon = saveWeapon;
 exports.loadWeapon = loadWeapon;
 exports.loadExperience = loadExperience;
+exports.loadMapFlow = loadMapFlow;
