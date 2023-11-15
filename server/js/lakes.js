@@ -55,7 +55,16 @@ const Lakes = {
             cobcruciancarp: "common",
             cobbluegill: "epic"
         }
-    }
+    },
+    enragedRiver: {
+        level: 1,
+        fish: {
+            enragedcoy: "common",
+            enragedsalmon: "uncommon",
+            enragedshark: "epic"
+        }
+    },
+    // Next lake
 };
 // only EPIC fish can be a consumable
 const ConsumableFish = {

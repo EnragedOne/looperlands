@@ -105,6 +105,7 @@ function(InfoManager, BubbleManager, Renderer, Mapx, Animation, Sprite, Animated
                                 "VILLAGESIGN9",
                                 "cobneon","cobguppy","cobgoldfish","cobtrout","coblobster","cobcatfish","cobangelfish","cobsardine","cobstingray","cobwhiting",
                                 "cobrosette", "cobparadisefish", "cobfatheadminnow", "cobgrasscarp", "cobgreensunfish", "cobcruciancarp", "cobbluegill",
+                                "enragedcoy", "enragedsalmon", "enragedshark",
                                 // @nextCharacterLine@
                                 "item-BOARHIDE",
                                 "item-THUDKEY",
@@ -3667,6 +3668,9 @@ function(InfoManager, BubbleManager, Renderer, Mapx, Animation, Sprite, Animated
             this.fish["cobgreensunfish"] = this.sprites["cobgreensunfish"];
             this.fish["cobcruciancarp"] = this.sprites["cobcruciancarp"];
             this.fish["cobbluegill"] = this.sprites["cobbluegill"];
+            this.fish["enragedcoy"] = this.sprites["enragedcoy"];
+            this.fish["enragedsalmon"] = this.sprites["enragedsalmon"];
+            this.fish["enragedshark"] = this.sprites["enragedshark"];
         },
 
         initAnimations: function() {
