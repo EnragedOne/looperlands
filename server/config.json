@@ -14,7 +14,8 @@
         "fhf",
         "wk",
         "crimsonspace",
-        "kbb"
+        "kbb",
+        "enraged"
     ],
     "map_directory": "./server/maps/",
     "metrics_enabled": false,
